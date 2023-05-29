@@ -14,4 +14,4 @@ jobs:
         shell: bash
         run: |
           choco install opencv --version 3.4.10
-          ls /c/tools/opencv
+          ls /c/tools/opencv/build
