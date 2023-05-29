@@ -1,0 +1,79 @@
+---
+name: Build GDMP
+on:
+  workflow_dispatch:
+    inputs:
+      godot_zip_url:
+        type: string
+        description: URL to Godot zip
+        required: true
+
+jobs:
+  build-gdmp-unix:
+    if: inputs.godot_zip_url != 0
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          repository: "j20001970/GDMP"
+          ref: "4.0"
+
+      - name: Download and extract Godot
+        shell: bash
+        run: |
+          curl -L ${{ inputs.godot_zip_url }} -o godot.zip
+          unzip godot.zip
+
+      - name: Rename zipped binary
+        shell: python
+        run: |
+          import os
+
+          godot_file = ${{ inputs.godot_zip_url }}
+
+          os.rename(os.path.basename(godot_file).rstrip(".zip"), "godot")
+
+      - name: Install OpenCV Windows
+        if: matrix.os == "windows-latest"
+        shell: bash
+        run: choco install --version 3.4.10
+
+      - name: Install OpenCV Ubuntu
+        if: matrix.os == "ubuntu-latest"
+        shell: bash
+        run: apt install libopencv-dev
+
+      - name: Install OpenCV Mac
+        if: matrix.os == "macos-latest"
+        shell: bash
+        run: brew install opencv
+
+      - name: Run setup.py for Windows
+        if: matrix.os == "windows-latest"
+        shell: bash
+        run: python setup.py --godot-binary ./godot --custom-opencv-dir D:\\ProgramData\\chocolatey\\lib\\opencv
+
+      - name: Run setup.py for Unix
+        if: matrix.os != "windows-latest"
+        shell: bash
+        run: python setup.py --godot-binary ./godot
+
+      - name: Build GDMP Windows
+        if: matrix.os == "windows-latest"
+        shell: bash
+        run: |
+          source ./venv/Scripts/activate
+          python build.py desktop
+
+      - name: Build GDMP Unix
+        if: matrix.is != "windows-latest"
+        shell: bash
+        run: |
+          source ./venv/bin/activate
+          python build.py desktop
